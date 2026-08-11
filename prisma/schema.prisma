@@ -1,0 +1,223 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Status {
+  ATIVA
+  NAO_ATIVA
+}
+
+model Unidade_Oficina {
+  id            Int             @id @default(autoincrement())
+  endereco      String
+  telefone      String
+  status        Status          @default(NAO_ATIVA)
+  colaboradorId Int
+  gerente       Colaborador     @relation(fields: [colaboradorId], references: [id])
+  ordemServicos Ordem_Servico[]
+}
+
+model Colaborador {
+  id              Int               @id @default(autoincrement())
+  nome_completo   String
+  email           String            @unique
+  cpf             String            @unique
+  senha           String
+  perfil          Perfil
+  data_entrada    DateTime          @default(now())
+  status          Status            @default(ATIVA)
+  ordemServicos   Ordem_Servico[]
+  pagamentos      Pagamento[]
+  unidadeOficinas Unidade_Oficina[]
+}
+
+enum Perfil {
+  ADMIN
+  DIRETORIA
+  GERENTE
+  CHEFE_DE_OFICINA
+  ATENDIMENTO
+  MECANICO
+}
+
+model Cliente {
+  id                 Int             @id @default(autoincrement())
+  nome_completo      String
+  email              String          @unique
+  pessoa_juridica_id Int
+  pessoa_juridica    Pessoa_Juridica @relation(fields: [pessoa_JuridicaId], references: [id])
+  pessoa_fisica_id   Int
+  pessoa_fisica      Pessoa_Fisica   @relation(fields: [pessoa_FisicaId], references: [id])
+
+  enderecoId        Int
+  endereco          Endereco @relation(fields: [enderecoId], references: [id])
+  telefoneId        Int
+  telefone          Telefone @relation(fields: [telefoneId], references: [id])
+  veiculo           Veiculo? @relation(fields: [veiculoId], references: [id])
+  data_criacao      DateTime @default(now())
+  veiculoId         Int?
+  pessoa_JuridicaId Int
+  pessoa_FisicaId   Int
+}
+
+model Veiculo {
+  id            Int             @id @default(autoincrement())
+  placa         String          @unique
+  marca         String
+  modelo        String
+  ano_criacao   String
+  cor           String
+  combustivel   Combustivel
+  km_ultima_vez Int?
+  clientes      Cliente[]
+  ordemServicos Ordem_Servico[]
+}
+
+enum Combustivel {
+  COMBUSTIVEL
+  DIESELS500
+  DIESELS10
+  ETANOL
+  ALCOOL
+  GNV
+  FLEX
+}
+
+model Pessoa_Fisica {
+  id              Int       @id @default(autoincrement())
+  data_nascimento DateTime
+  cpf             String
+  clientes        Cliente[]
+}
+
+model Pessoa_Juridica {
+  id           Int       @id @default(autoincrement())
+  razao_social String
+  cnpj         String
+  clientes     Cliente[]
+}
+
+model Telefone {
+  id              Int       @id @default(autoincrement())
+  texto           String
+  numero_telefone String
+  clientes        Cliente[]
+}
+
+model Endereco {
+  id          Int       @id @default(autoincrement())
+  logradouro  String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  cep         String
+  observacao  String?
+  clientes    Cliente[]
+}
+
+model Servico {
+  id             Int             @id @default(autoincrement())
+  cod_servico    String          @unique
+  nome           String
+  descricao      String
+  preco          Decimal         @db.Decimal(10, 2)
+  tempo_estimado Int
+  status         Status
+  ordemServicos  Ordem_Servico[]
+  catalogos      Catalogo[]
+}
+
+model Pecas {
+  id             Int        @id @default(autoincrement())
+  cod_peca       String
+  nome           String
+  preco_custo    Decimal    @db.Decimal(10, 2)
+  preco_venda    Decimal    @db.Decimal(10, 2)
+  estoque_minimo Int
+  estoque_atual  Int
+  fornecedorId   Int
+  fornecedor     Fornecedor @relation(fields: [fornecedorId], references: [id])
+  catalogos      Catalogo[]
+}
+
+model Fornecedor {
+  id           Int     @id @default(autoincrement())
+  razao_social String
+  cnpj         String
+  email        String  @unique
+  telefone     String
+  pecas        Pecas[]
+}
+
+model Ordem_Servico {
+  id                Int             @id @default(autoincrement())
+  catalogo          Catalogo        @relation(fields: [catalogoId], references: [id])
+  numero_os         String
+  unidade           Unidade_Oficina @relation(fields: [unidade_OficinaId], references: [id])
+  unidade_OficinaId Int
+  veiculoId         Int
+  veiculo           Veiculo         @relation(fields: [veiculoId], references: [id])
+  abertura          DateTime        @default(now())
+  previsao_entrega  DateTime?
+  observacao        String
+  colaboradorId     Int?
+  mecanico          Colaborador?    @relation(fields: [colaboradorId], references: [id])
+  etapa             Etapa           @default(ABERTA)
+  pagamento         Pagamento       @relation(fields: [pagamentoId], references: [id])
+  pagamentoId       Int
+  servico           Servico?        @relation(fields: [servicoId], references: [id])
+  servicoId         Int?
+  catalogoId        Int
+}
+
+model Pagamento {
+  id              Int             @id @default(autoincrement())
+  valor           Decimal         @db.Decimal(10, 2)
+  desconto        Int?
+  forma_pagamento Forma
+  num_parcelas    Int?
+  data_hora       DateTime        @default(now())
+  quem_recebe_id  Int
+  quem_recebe     Colaborador     @relation(fields: [colaboradorId], references: [id])
+  ordemServicos   Ordem_Servico[]
+  colaboradorId   Int
+}
+
+enum Forma {
+  DINHEIRO
+  PIX
+  DEBIDO
+  CREDITO
+  BOLETO
+}
+
+enum Etapa {
+  ABERTA
+  ORCAMENTO
+  APROVADA
+  EM_EXECUCAO
+  AGUARDANDO_PECA
+  FINALIZADO
+  ENTREGUE
+  CANCELADA
+}
+
+model Catalogo {
+  id            Int             @id @default(autoincrement())
+  servicoId     Int
+  servicos      Servico         @relation(fields: [servicoId], references: [id])
+  pecasId       Int
+  pecas         Pecas           @relation(fields: [pecasId], references: [id])
+  ordemServicos Ordem_Servico[]
+}
