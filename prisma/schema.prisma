@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -12,109 +7,58 @@ datasource db {
   provider = "mysql"
 }
 
-enum Status {
-  ATIVA
-  NAO_ATIVA
+model categoria {
+  id              Int         @id @default(autoincrement())
+  nome            String
+  paiId           Int?
+  categoria       categoria?  @relation("categoriaTocategoria", fields: [paiId], references: [id], map: "Categoria_paiId_fkey")
+  other_categoria categoria[] @relation("categoriaTocategoria")
+  servico         servico[]
+
+  @@index([paiId], map: "Categoria_paiId_fkey")
 }
 
-model Unidade_Oficina {
-  id            Int             @id @default(autoincrement())
-  endereco      String
-  telefone      String
-  status        Status          @default(NAO_ATIVA)
-  colaboradorId Int
-  gerente       Colaborador     @relation(fields: [colaboradorId], references: [id])
-  ordemServicos Ordem_Servico[]
+model cliente {
+  id             Int                @id @default(autoincrement())
+  email          String?
+  enderecoId     Int
+  dataNascimento DateTime?
+  documento      String             @unique(map: "Cliente_documento_key")
+  nome           String
+  tipoPessoa     cliente_tipoPessoa
+  endereco       endereco           @relation(fields: [enderecoId], references: [id], map: "Cliente_enderecoId_fkey")
+  telefone       telefone[]
+  veiculo        veiculo[]
+
+  @@index([enderecoId], map: "Cliente_enderecoId_fkey")
 }
 
-model Colaborador {
-  id              Int               @id @default(autoincrement())
-  nome_completo   String
-  email           String            @unique
-  cpf             String            @unique
-  senha           String
-  perfil          Perfil
-  data_entrada    DateTime          @default(now())
-  status          Status            @default(ATIVA)
-  ordemServicos   Ordem_Servico[]
-  pagamentos      Pagamento[]
-  unidadeOficinas Unidade_Oficina[]
+model colaborador {
+  id                                                     Int                   @id @default(autoincrement())
+  nome_completo                                          String
+  email                                                  String                @unique(map: "Colaborador_email_key")
+  cpf                                                    String                @unique(map: "Colaborador_cpf_key")
+  senha                                                  String
+  perfil                                                 colaborador_perfil
+  status                                                 Boolean               @default(true)
+  dataAdmissao                                           DateTime              @default(now())
+  supervisorId                                           Int?
+  unidadeId                                              Int
+  colaborador                                            colaborador?          @relation("colaboradorTocolaborador", fields: [supervisorId], references: [id], map: "Colaborador_supervisorId_fkey")
+  other_colaborador                                      colaborador[]         @relation("colaboradorTocolaborador")
+  unidade_oficina_colaborador_unidadeIdTounidade_oficina unidade_oficina       @relation("colaborador_unidadeIdTounidade_oficina", fields: [unidadeId], references: [id], map: "Colaborador_unidadeId_fkey")
+  itemosservico                                          itemosservico[]
+  movimentacaoestoque                                    movimentacaoestoque[]
+  ordem_servico_ordem_servico_atendenteIdTocolaborador   ordem_servico[]       @relation("ordem_servico_atendenteIdTocolaborador")
+  ordem_servico_ordem_servico_mecanincoIdTocolaborador   ordem_servico[]       @relation("ordem_servico_mecanincoIdTocolaborador")
+  pagamento                                              pagamento[]
+  unidade_oficina_unidade_oficina_gerenteIdTocolaborador unidade_oficina?      @relation("unidade_oficina_gerenteIdTocolaborador")
+
+  @@index([supervisorId], map: "Colaborador_supervisorId_fkey")
+  @@index([unidadeId], map: "Colaborador_unidadeId_fkey")
 }
 
-enum Perfil {
-  ADMIN
-  DIRETORIA
-  GERENTE
-  CHEFE_DE_OFICINA
-  ATENDIMENTO
-  MECANICO
-}
-
-model Cliente {
-  id                 Int             @id @default(autoincrement())
-  nome_completo      String
-  email              String          @unique
-  pessoa_juridica_id Int
-  pessoa_juridica    Pessoa_Juridica @relation(fields: [pessoa_JuridicaId], references: [id])
-  pessoa_fisica_id   Int
-  pessoa_fisica      Pessoa_Fisica   @relation(fields: [pessoa_FisicaId], references: [id])
-
-  enderecoId        Int
-  endereco          Endereco @relation(fields: [enderecoId], references: [id])
-  telefoneId        Int
-  telefone          Telefone @relation(fields: [telefoneId], references: [id])
-  veiculo           Veiculo? @relation(fields: [veiculoId], references: [id])
-  data_criacao      DateTime @default(now())
-  veiculoId         Int?
-  pessoa_JuridicaId Int
-  pessoa_FisicaId   Int
-}
-
-model Veiculo {
-  id            Int             @id @default(autoincrement())
-  placa         String          @unique
-  marca         String
-  modelo        String
-  ano_criacao   String
-  cor           String
-  combustivel   Combustivel
-  km_ultima_vez Int?
-  clientes      Cliente[]
-  ordemServicos Ordem_Servico[]
-}
-
-enum Combustivel {
-  COMBUSTIVEL
-  DIESELS500
-  DIESELS10
-  ETANOL
-  ALCOOL
-  GNV
-  FLEX
-}
-
-model Pessoa_Fisica {
-  id              Int       @id @default(autoincrement())
-  data_nascimento DateTime
-  cpf             String
-  clientes        Cliente[]
-}
-
-model Pessoa_Juridica {
-  id           Int       @id @default(autoincrement())
-  razao_social String
-  cnpj         String
-  clientes     Cliente[]
-}
-
-model Telefone {
-  id              Int       @id @default(autoincrement())
-  texto           String
-  numero_telefone String
-  clientes        Cliente[]
-}
-
-model Endereco {
+model endereco {
   id          Int       @id @default(autoincrement())
   logradouro  String
   numero      String
@@ -123,78 +67,181 @@ model Endereco {
   cidade      String
   cep         String
   observacao  String?
-  clientes    Cliente[]
+  cliente     cliente[]
 }
 
-model Servico {
-  id             Int             @id @default(autoincrement())
-  cod_servico    String          @unique
-  nome           String
-  descricao      String
-  preco          Decimal         @db.Decimal(10, 2)
-  tempo_estimado Int
-  status         Status
-  ordemServicos  Ordem_Servico[]
-  catalogos      Catalogo[]
+model fornecedor {
+  id          Int    @id @default(autoincrement())
+  cnpj        String
+  email       String @unique(map: "Fornecedor_email_key")
+  telefone    String
+  razaoSocial String
+  peca        peca[]
 }
 
-model Pecas {
-  id             Int        @id @default(autoincrement())
-  cod_peca       String
-  nome           String
-  preco_custo    Decimal    @db.Decimal(10, 2)
-  preco_venda    Decimal    @db.Decimal(10, 2)
-  estoque_minimo Int
-  estoque_atual  Int
-  fornecedorId   Int
-  fornecedor     Fornecedor @relation(fields: [fornecedorId], references: [id])
-  catalogos      Catalogo[]
+model itemospeca {
+  id            Int           @id @default(autoincrement())
+  quantidade    Int
+  precoCobrado  Decimal       @db.Decimal(10, 2)
+  osId          Int
+  pecaId        Int           @unique(map: "ItemOSPeca_pecaId_key")
+  ordem_servico ordem_servico @relation(fields: [osId], references: [id], onDelete: Cascade, map: "ItemOSPeca_osId_fkey")
+  peca          peca          @relation(fields: [pecaId], references: [id], map: "ItemOSPeca_pecaId_fkey")
+
+  @@index([osId], map: "ItemOSPeca_osId_fkey")
 }
 
-model Fornecedor {
-  id           Int     @id @default(autoincrement())
-  razao_social String
-  cnpj         String
-  email        String  @unique
-  telefone     String
-  pecas        Pecas[]
+model itemosservico {
+  id            Int           @id @default(autoincrement())
+  quantidade    Int
+  precoCobrado  Decimal       @db.Decimal(10, 2)
+  osId          Int
+  servicoId     Int
+  mecanicaId    Int
+  colaborador   colaborador   @relation(fields: [mecanicaId], references: [id], map: "ItemOSServico_mecanicaId_fkey")
+  ordem_servico ordem_servico @relation(fields: [osId], references: [id], onDelete: Cascade, map: "ItemOSServico_osId_fkey")
+  servico       servico       @relation(fields: [servicoId], references: [id], map: "ItemOSServico_servicoId_fkey")
+
+  @@index([mecanicaId], map: "ItemOSServico_mecanicaId_fkey")
+  @@index([osId], map: "ItemOSServico_osId_fkey")
+  @@index([servicoId], map: "ItemOSServico_servicoId_fkey")
 }
 
-model Ordem_Servico {
-  id                Int             @id @default(autoincrement())
-  catalogo          Catalogo        @relation(fields: [catalogoId], references: [id])
-  numero_os         String
-  unidade           Unidade_Oficina @relation(fields: [unidade_OficinaId], references: [id])
-  unidade_OficinaId Int
-  veiculoId         Int
-  veiculo           Veiculo         @relation(fields: [veiculoId], references: [id])
-  abertura          DateTime        @default(now())
-  previsao_entrega  DateTime?
-  observacao        String
-  colaboradorId     Int?
-  mecanico          Colaborador?    @relation(fields: [colaboradorId], references: [id])
-  etapa             Etapa           @default(ABERTA)
-  pagamento         Pagamento       @relation(fields: [pagamentoId], references: [id])
-  pagamentoId       Int
-  servico           Servico?        @relation(fields: [servicoId], references: [id])
-  servicoId         Int?
-  catalogoId        Int
+model movimentacaoestoque {
+  id            Int                      @id @default(autoincrement())
+  tipo          movimentacaoestoque_tipo
+  quantidade    Int
+  motivo        String
+  dataHora      DateTime                 @default(now())
+  pecaId        Int
+  responsavelId Int
+  odId          Int?
+  ordem_servico ordem_servico?           @relation(fields: [odId], references: [id], map: "MovimentacaoEstoque_odId_fkey")
+  peca          peca                     @relation(fields: [pecaId], references: [id], map: "MovimentacaoEstoque_pecaId_fkey")
+  colaborador   colaborador              @relation(fields: [responsavelId], references: [id], map: "MovimentacaoEstoque_responsavelId_fkey")
+
+  @@index([odId], map: "MovimentacaoEstoque_odId_fkey")
+  @@index([pecaId], map: "MovimentacaoEstoque_pecaId_fkey")
+  @@index([responsavelId], map: "MovimentacaoEstoque_responsavelId_fkey")
 }
 
-model Pagamento {
-  id              Int             @id @default(autoincrement())
-  valor           Decimal         @db.Decimal(10, 2)
-  desconto        Int?
-  forma_pagamento Forma
-  num_parcelas    Int?
-  data_hora       DateTime        @default(now())
-  quem_recebe_id  Int
-  quem_recebe     Colaborador     @relation(fields: [colaboradorId], references: [id])
-  ordemServicos   Ordem_Servico[]
-  colaboradorId   Int
+model ordem_servico {
+  id                                                 Int                   @id @default(autoincrement())
+  numero_os                                          String                @unique(map: "Ordem_Servico_numero_os_key")
+  veiculoId                                          Int
+  abertura                                           DateTime              @default(now())
+  previsao_entrega                                   DateTime?
+  observacao                                         String?               @db.Text
+  etapa                                              ordem_servico_etapa   @default(ABERTA)
+  KmEntrada                                          Int
+  atendenteId                                        Int
+  desconto                                           Decimal               @default(0.00) @db.Decimal(10, 2)
+  mecanincoId                                        Int?
+  unidadeId                                          Int
+  itemospeca                                         itemospeca[]
+  itemosservico                                      itemosservico[]
+  movimentacaoestoque                                movimentacaoestoque[]
+  colaborador_ordem_servico_atendenteIdTocolaborador colaborador           @relation("ordem_servico_atendenteIdTocolaborador", fields: [atendenteId], references: [id], map: "Ordem_Servico_atendenteId_fkey")
+  colaborador_ordem_servico_mecanincoIdTocolaborador colaborador?          @relation("ordem_servico_mecanincoIdTocolaborador", fields: [mecanincoId], references: [id], map: "Ordem_Servico_mecanincoId_fkey")
+  unidade_oficina                                    unidade_oficina       @relation(fields: [unidadeId], references: [id], map: "Ordem_Servico_unidadeId_fkey")
+  veiculo                                            veiculo               @relation(fields: [veiculoId], references: [id], map: "Ordem_Servico_veiculoId_fkey")
+  pagamento                                          pagamento[]
+
+  @@index([atendenteId], map: "Ordem_Servico_atendenteId_fkey")
+  @@index([mecanincoId], map: "Ordem_Servico_mecanincoId_fkey")
+  @@index([unidadeId], map: "Ordem_Servico_unidadeId_fkey")
+  @@index([veiculoId], map: "Ordem_Servico_veiculoId_fkey")
 }
 
-enum Forma {
+model pagamento {
+  id            Int             @id @default(autoincrement())
+  valor         Decimal         @db.Decimal(10, 2)
+  num_parcelas  Int             @default(1)
+  data_hora     DateTime        @default(now())
+  forma         pagamento_forma
+  osId          Int
+  quemRecebeId  Int
+  ordem_servico ordem_servico   @relation(fields: [osId], references: [id], map: "Pagamento_osId_fkey")
+  colaborador   colaborador     @relation(fields: [quemRecebeId], references: [id], map: "Pagamento_quemRecebeId_fkey")
+
+  @@index([osId], map: "Pagamento_osId_fkey")
+  @@index([quemRecebeId], map: "Pagamento_quemRecebeId_fkey")
+}
+
+model peca {
+  id                  Int                   @id @default(autoincrement())
+  codigo              String                @unique(map: "Peca_codigo_key")
+  nome                String
+  precoCusto          Decimal               @db.Decimal(10, 2)
+  precoVenda          Decimal               @db.Decimal(10, 2)
+  estoqueMinimo       Int
+  estoqueAtual        Int                   @default(0)
+  fornecedorId        Int?
+  itemospeca          itemospeca?
+  movimentacaoestoque movimentacaoestoque[]
+  fornecedor          fornecedor?           @relation(fields: [fornecedorId], references: [id], map: "Peca_fornecedorId_fkey")
+
+  @@index([fornecedorId], map: "Peca_fornecedorId_fkey")
+}
+
+model servico {
+  id            Int             @id @default(autoincrement())
+  nome          String
+  descricao     String          @db.Text
+  status        Boolean         @default(true)
+  categoriaId   Int
+  codigo        String          @unique(map: "Servico_codigo_key")
+  precoTabela   Decimal         @db.Decimal(10, 2)
+  tempoEstimado Int
+  itemosservico itemosservico[]
+  categoria     categoria       @relation(fields: [categoriaId], references: [id], map: "Servico_categoriaId_fkey")
+
+  @@index([categoriaId], map: "Servico_categoriaId_fkey")
+}
+
+model telefone {
+  id        Int     @id @default(autoincrement())
+  clienteId Int
+  numero    String  @unique(map: "Telefone_numero_key")
+  cliente   cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade, map: "Telefone_clienteId_fkey")
+
+  @@index([clienteId], map: "Telefone_clienteId_fkey")
+}
+
+model unidade_oficina {
+  id                                                 Int             @id @default(autoincrement())
+  endereco                                           String
+  telefone                                           String
+  status                                             Boolean         @default(true)
+  gerenteId                                          Int?            @unique(map: "Unidade_Oficina_gerenteId_key")
+  nome                                               String
+  colaborador_colaborador_unidadeIdTounidade_oficina colaborador[]   @relation("colaborador_unidadeIdTounidade_oficina")
+  ordem_servico                                      ordem_servico[]
+  colaborador_unidade_oficina_gerenteIdTocolaborador colaborador?    @relation("unidade_oficina_gerenteIdTocolaborador", fields: [gerenteId], references: [id], map: "Unidade_Oficina_gerenteId_fkey")
+}
+
+model veiculo {
+  id            Int                 @id @default(autoincrement())
+  placa         String              @unique(map: "Veiculo_placa_key")
+  marca         String
+  modelo        String
+  cor           String
+  combustivel   veiculo_combustivel
+  km_ultima_vez Int?
+  anoFabricacao Int
+  clienteId     Int
+  ordem_servico ordem_servico[]
+  cliente       cliente             @relation(fields: [clienteId], references: [id], map: "Veiculo_clienteId_fkey")
+
+  @@index([clienteId], map: "Veiculo_clienteId_fkey")
+}
+
+enum movimentacaoestoque_tipo {
+  ENTRADA
+  SAIDA
+}
+
+enum pagamento_forma {
   DINHEIRO
   PIX
   DEBIDO
@@ -202,7 +249,31 @@ enum Forma {
   BOLETO
 }
 
-enum Etapa {
+enum colaborador_perfil {
+  ADMIN
+  DIRETORIA
+  GERENTE
+  CHEFE_DE_OFICINA
+  ATENDIMENTO
+  MECANICO
+}
+
+enum veiculo_combustivel {
+  COMBUSTIVEL
+  DIESEL
+  ETANOL
+  FLEX
+  GNV
+  ELETRICO
+  HIBRIDO
+}
+
+enum cliente_tipoPessoa {
+  FISICA
+  JURIDICA
+}
+
+enum ordem_servico_etapa {
   ABERTA
   ORCAMENTO
   APROVADA
@@ -211,13 +282,4 @@ enum Etapa {
   FINALIZADO
   ENTREGUE
   CANCELADA
-}
-
-model Catalogo {
-  id            Int             @id @default(autoincrement())
-  servicoId     Int
-  servicos      Servico         @relation(fields: [servicoId], references: [id])
-  pecasId       Int
-  pecas         Pecas           @relation(fields: [pecasId], references: [id])
-  ordemServicos Ordem_Servico[]
 }
