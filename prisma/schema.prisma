@@ -12,7 +12,7 @@ model categoria {
   nome            String
   paiId           Int?
   categoria       categoria?  @relation("categoriaTocategoria", fields: [paiId], references: [id], map: "Categoria_paiId_fkey")
-  other_categoria categoria[] @relation("categoriaTocategoria")
+  otherlategoria categoria[] @relation("categoriaTocategoria")
   servico         servico[]
 
   @@index([paiId], map: "Categoria_paiId_fkey")
